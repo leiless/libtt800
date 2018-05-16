@@ -1,0 +1,15 @@
+An ANSI implementation of the TGFSR(twisted generalized
+feedback shift register) random number generator TT800
+
+This is a single file implementation, should be easy to embed into any project
+
+Published in Matsumoto, M. and Kurita, Y.: Twisted GFSR generators II.
+  ACM Transactions on Modeling and Computer Simulations,
+  Vol 4, No. 3, July 1994, pp 254--266
+
+The generator produces a pseudo-random sequence of 32 bit integers
+  with period 2^800 - 1 and is reported to have excellent
+  equidistribution properties, as well as being fast.
+
+TODO
+
