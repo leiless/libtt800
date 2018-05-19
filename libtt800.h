@@ -1,7 +1,7 @@
 /* 
  * Created 18E16
  *
- * On file implementation of TT800
+ * Portable implementation of TT800 PRNG
  *
  * see:
  *  https://metacpan.org/release/Math-Random-TT800
@@ -36,11 +36,11 @@ struct tt800_rand_state {
     int k;                      /* word counter */
 };
 
-struct tt800_rand_state _tt800 = {{0}, 0};
+struct tt800_rand_state _tt800 = {{0}, 0};  /* internal random state */
 
-int _tt800_rand_initialized = 0;       /* set when properly seeded */
+volatile int _tt800_rand_initialized = 0;   /* set when properly seeded */
 
-/*
+/**
  * Seed the random number generator. The first word of the internal
  * state is set by the (lower) 32 bits of seed. The remaining 24 words
  * are generated from the first one by a linear congruential pseudo
@@ -50,6 +50,8 @@ int _tt800_rand_initialized = 0;       /* set when properly seeded */
  * since they only are used to produce a very short sequence, which in
  * turn only is a seed to a stronger generator, it probably doesn't
  * matter much.
+ *
+ * @seed        random seed (duh)
  */
 void tt800_srand(uint32_t seed)
 {
@@ -64,34 +66,42 @@ void tt800_srand(uint32_t seed)
     _tt800_rand_initialized = 1;
 }
 
-/*
- * Iterate the TGFSR once to get a new state which can be used to
- *   produce another 25 random numbers.
+/**
+ * Iterate the TGFSR once to get a new state
+ *  which can be used to produce another 25 random numbers.
+ *
+ * TGFSR for twisted generalized feedback shift register
  */
 void _tt800_iterate_tgfsr(void)
 {
     int i;
-    for (i = 0; i < TT800_N - TT800_M; i++)
+
+    for (i = 0; i < TT800_N - TT800_M; i++) {
         _tt800.x[i] = _tt800.x[i + TT800_M] ^
                         (_tt800.x[i] >> 1) ^
                         _tt800_magic[_tt800.x[i] & 1];
+    }
 
-    for (; i < TT800_N; i++)
+    for (; i < TT800_N; i++) {
         _tt800.x[i] = _tt800.x[i + TT800_M - TT800_N] ^
                         (_tt800.x[i] >> 1) ^
                         _tt800_magic[_tt800.x[i] & 1];
+    }
 }
 
-/*
+/**
  * Produce a random number from the next word of the internal state.
+ *  value in the interval [0, 2^32).
  */
-uint32_t _tt800_next_urand(void)
+uint32_t tt800_urand(void)
 {
     uint32_t y;
 
     if (!_tt800_rand_initialized) {
+#ifdef DEBUG
         assert(_tt800_rand_initialized);    /* abort */
-        tt800_srand(1);                      /* seed 1 if assertions disabled */
+#endif
+        tt800_srand(1);                     /* seed 1 if assertions disabled */
     }
 
     if (++_tt800.k == TT800_N) {
@@ -105,23 +115,15 @@ uint32_t _tt800_next_urand(void)
     return y;
 }
 
-/*
+/**
  * Obtain one random integer value in the interval [0, 2^31)
  */
 int32_t tt800_rand(void)
 {
-    return (int32_t) (_tt800_next_urand() & 0x7fffffff);
+    return (int32_t) (tt800_urand() & 0x7fffffff);
 }
 
-/*
- * Obtain one random integer value in the interval [0, 2^32).
- */
-uint32_t tt800_urand(void)
-{
-    return _tt800_next_urand();
-}
-
-/*
+/**
  * Obtain one random floating point value in the interval [0.0, 1.0)
  *
  * If the value is converted to a floating point type with less than
@@ -130,29 +132,50 @@ uint32_t tt800_urand(void)
  */
 double tt800_drand(void)
 {
-    return _tt800_next_urand() * TT800_INV_MOD;
+    return tt800_urand() * TT800_INV_MOD;
 }
 
-/*
+/**
  * Retrieve the internal state of the random generator.
+ * @state       (duh)
  */
 void tt800_get_rand_state(struct tt800_rand_state *state)
 {
     int i;
+#ifdef DEBUG
+    assert(state != NULL);
+#endif
     for (i = 0; i < TT800_N; i++)
         state->x[i] = _tt800.x[i];
     state->k = _tt800.k;
 }
 
-/*
+/**
  * Set the internal state of the random number generator.
+ * @state       (ditto)
  */
-void tt800_set_rand_state(struct tt800_rand_state *state)
+void tt800_set_rand_state(const struct tt800_rand_state *state)
 {
     int i;
+#ifdef DEBUG
+    assert(state != NULL);
+#endif
     for (i = 0; i < TT800_N; i++)
         _tt800.x[i] = state->x[i];
     _tt800.k = state->k;
+}
+
+/**
+ * Print TT800 internal state(for debug-sake)
+ */
+void tt800_print_state(void)
+{
+    int i;
+    printf("counter: %d\n", _tt800.k);
+    printf("seeds: ");
+    for (i = 0; i < TT800_N; i++) {
+        printf("%#010x%c", _tt800.x[i], i != TT800_N-1 ? ' ' : '\n');
+    }
 }
 
 #endif      /* LIBTT800_H */

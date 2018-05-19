@@ -1,7 +1,7 @@
 An ANSI implementation of the TGFSR(twisted generalized
 feedback shift register) random number generator TT800
 
-This is a single file implementation, should be easy to embed into any project
+This is a portable implementation, should be easy to embed into any project
 
 Published in Matsumoto, M. and Kurita, Y.: Twisted GFSR generators II.
   ACM Transactions on Modeling and Computer Simulations,
@@ -11,5 +11,16 @@ The generator produces a pseudo-random sequence of 32 bit integers
   with period 2^800 - 1 and is reported to have excellent
   equidistribution properties, as well as being fast.
 
-TODO
+Exported functionalities:
+  void tt800_srand(uint32_t seed);
+  uint32_t tt800_urand(void);
+  int32_t tt800_rand(void);
+  double tt800_drand(void);
+  void tt800_get_rand_state(struct tt800_rand_state *state);
+  void tt800_set_rand_state(const struct tt800_rand_state *state);
+  void tt800_print_state(void);
+
+References:
+  https://metacpan.org/release/Math-Random-TT800
+  http://sporadic.stanford.edu/bump/gnugo/git/gnugo/utils/random.c
 
